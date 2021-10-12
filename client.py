@@ -1,10 +1,7 @@
 import socket
-
-
-def create_message(size, s):
-    s = str(int(s) + 1)
-    s = s.zfill(size)
-    return s
+import threading
+from hashlib import md5
+import select
 
 
 def main():
@@ -12,18 +9,47 @@ def main():
     sock = socket.socket()
     sock.connect(('127.0.0.1', 8820))
     print("Connected!")
-    length = sock.recv(3).decode()
-    data = sock.recv(int(length)).decode()
-    size = int(data.split("Size of string is - ")[1])
-    s = "0" * size
-    while data == "wrong" or " - " in data:
-        print(data)
-        s = create_message(size, s)
-        length = str(len(s))
-        message = length.zfill(3) + s
-        sock.send(message.encode())
-        length = sock.recv(3).decode()
-        data = sock.recv(int(length)).decode()
+    data = ""
+    size = 0
+    hash1 = ""
+    end = 0
+    s = ""
+    start = 0
+    while "correct" not in data:
+        r_list, w_list, e_list = select.select([sock], [sock], [])
+        for sok in r_list:
+            length = sok.recv(3).decode()
+            try:
+                data = sok.recv(int(length)).decode()
+                print(data)
+                if "|" in data:
+                    hash1 = data.split("|")[0]
+                    size = int(data.split("|")[1])
+                else:
+                    if " - " in data:
+                        start = int(data.split(" - ")[0])
+                        end = int(data.split(" - ")[1])
+                        if len(s) < size:
+                            s = str(start).zfill(size)
+                        else:
+                            s = str(start)
+                    while start < end:
+                        print(s)
+                        start += 1
+                        s = str(start)
+                        s = s.zfill(3)
+                        if md5(s.encode()).hexdigest() == hash1:
+                            message = "found - " + s
+                            print(message)
+                            length = str(len(message))
+                            sok.send((length.zfill(3) + message).encode())
+                            exit()
+                    message = str(start) + " done"
+                    length = str(len(message))
+                    sok.send((length.zfill(3) + message).encode())
+            except ValueError:
+                print("error - ValueError")
+                quit()
     print(data)
 
 
