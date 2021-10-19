@@ -15,6 +15,7 @@ def main():
     end = 0
     s = ""
     start = 0
+    id1 = "0"
     while "correct" not in data:
         r_list, w_list, e_list = select.select([sock], [sock], [])
         for sok in r_list:
@@ -25,6 +26,7 @@ def main():
                 if "|" in data:
                     hash1 = data.split("|")[0]
                     size = int(data.split("|")[1])
+                    id1 = data.split("|")[2]
                 else:
                     if " - " in data:
                         start = int(data.split(" - ")[0])
@@ -34,7 +36,6 @@ def main():
                         else:
                             s = str(start)
                     while start < end:
-                        print(s)
                         start += 1
                         s = str(start)
                         s = s.zfill(3)
@@ -44,7 +45,7 @@ def main():
                             length = str(len(message))
                             sok.send((length.zfill(3) + message).encode())
                             exit()
-                    message = str(start) + " done"
+                    message = id1 + " done"
                     length = str(len(message))
                     sok.send((length.zfill(3) + message).encode())
             except ValueError:
