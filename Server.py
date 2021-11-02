@@ -39,6 +39,7 @@ def main():
     while True:
         r_list, w_list, e_list = select.select([server_socket] + client_sockets, [], [], 0.01)
         for sock in r_list:
+
             if sock == server_socket:
                 connection, client_address = sock.accept()
                 client_sockets.append(connection)
