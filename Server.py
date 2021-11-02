@@ -11,6 +11,12 @@ class Searcher:
 
 
 def main():
+    """
+    hash1 = input("Enter hash: ")
+    print("hash - " + hash1)
+    size = 10
+    inc = 100000
+    """
     start_string = input("Enter a string: ")
     hash1 = md5(start_string.encode()).hexdigest()
     print("hash - " + hash1)
@@ -29,7 +35,7 @@ def main():
     id1 = 0
     start = "0"
     searcher_lst = []
-    area = ""
+    found = False
     while True:
         r_list, w_list, e_list = select.select([server_socket] + client_sockets, [], [], 0.01)
         for sock in r_list:
@@ -58,9 +64,9 @@ def main():
                             length = str(len(data))
                             message = length.zfill(3) + data
                             for sok in client_sockets:
-                                sok.send(message.encode())
-                                sok.close()
-                                exit()
+                                if sok != sock:
+                                    sok.send(message.encode())
+                            found = True
 
                         elif "done" in data:
                             id2 = int(data.split(" done")[0])
@@ -82,6 +88,9 @@ def main():
                     client_sockets.remove(sock)
                     sock.close()
 
+        if found:
+            server_socket.close()
+            exit()
         for message in messages_to_send:
             current_socket, data = message
             for sok in client_sockets:
