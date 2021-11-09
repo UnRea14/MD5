@@ -41,6 +41,13 @@ class Search_Zones:
                 self.zones_lst.remove(zone)
                 return
 
+    def str(self):
+        s = "["
+        for zone in self.zones_lst:
+            s += ",area=" + zone.area + " and " + "state=" + str(zone.state)
+        s += "]"
+        return s
+
 
 def main():
     """
@@ -53,6 +60,7 @@ def main():
     print("hash - " + hash1)
     size = len(start_string)
     search_zones = Search_Zones(size_of_string=size)
+    print(search_zones.str())
     print("Setting up server...")
     server_socket = socket.socket()
     server_socket.bind(('0.0.0.0', 8820))
