@@ -9,12 +9,11 @@ def main():
     sock = socket.socket()
     sock.connect(('127.0.0.1', 8820))
     print("Connected!")
-    data = ""
     size = 0
     hash1 = ""
     s = ""
     id1 = "0"
-    while "found" not in data:
+    while True:
         r_list, w_list, e_list = select.select([sock], [sock], [])
         for sok in r_list:
             try:
@@ -22,6 +21,8 @@ def main():
                 try:
                     data = sok.recv(int(length)).decode()
                     print(data)
+                    if data == "found":
+                        quit()
                     if "|" in data:  # hash|chars in string|client number
                         hash1 = data.split("|")[0]
                         size = int(data.split("|")[1])
@@ -50,13 +51,12 @@ def main():
                         sok.send((length.zfill(3) + message).encode())
 
                 except ValueError:
-                    print("error - ValueError")
+                    print("ValueError")
                     quit()
 
             except ConnectionAbortedError:
-                continue
-
-    print(data)
+                print("CAE")
+                quit()
 
 
 if __name__ == "__main__":

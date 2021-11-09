@@ -39,7 +39,6 @@ def main():
     while True:
         r_list, w_list, e_list = select.select([server_socket] + client_sockets, [], [], 0.01)
         for sock in r_list:
-
             if sock == server_socket:
                 connection, client_address = sock.accept()
                 client_sockets.append(connection)
@@ -61,12 +60,18 @@ def main():
                     try:
                         data = sock.recv(int(length)).decode()
                         print(data)
-                        if "found" in data:
-                            length = str(len(data))
-                            message = length.zfill(3) + data
-                            for sok in client_sockets:
-                                if sok != sock:
-                                    sok.send(message.encode())
+                        if found and "done" in data:
+                            message = "005found"
+                            sock.send(message.encode())
+                            client_sockets.remove(sock)
+                            sock.close()
+                            if not client_sockets:
+                                server_socket.close()
+                                exit()
+
+                        elif "found" in data:
+                            client_sockets.remove(sock)
+                            sock.close()
                             found = True
 
                         elif "done" in data:
@@ -80,18 +85,15 @@ def main():
                             messages_to_send.append((sock, message))
 
                     except ValueError:
-                        print("value error")
+                        print("Value error")
                         client_sockets.remove(sock)
                         sock.close()
 
                 except ConnectionResetError:
-                    print("CR error")
+                    print("CRE")
                     client_sockets.remove(sock)
                     sock.close()
 
-        if found:
-            server_socket.close()
-            exit()
         for message in messages_to_send:
             current_socket, data = message
             for sok in client_sockets:
