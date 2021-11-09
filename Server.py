@@ -1,6 +1,7 @@
 from hashlib import md5
 import socket
 import select
+import math
 
 
 class Searcher:
@@ -10,21 +11,48 @@ class Searcher:
         self.area_of_search = area
 
 
+class Zone:
+    def __init__(self, area):
+        self.area = area
+        self.state = -1  # -1 = not worked on, 0 = worked on, 1 = finished
+
+
+class Search_Zones:
+    def __init__(self, size_of_string):
+        self.zones_lst = []
+        num = 10**size_of_string
+        zone_count = int(math.sqrt(num))
+        i = 0
+        start = "0"
+        while i < zone_count:
+            end = str(int(start) + zone_count)
+            self.zones_lst.append(Zone(start + " - " + end))
+            start = end
+            i += 1
+
+    def search_in_lst(self):
+        for zone in self.zones_lst:
+            if zone.state == -1:
+                return zone
+
+    def remove_zone(self, area):
+        for zone in self.zones_lst:
+            if zone.area == area:
+                self.zones_lst.remove(zone)
+                return
+
+
 def main():
     """
     hash1 = input("Enter hash: ")
     print("hash - " + hash1)
     size = 10
-    inc = 100000
     """
     start_string = input("Enter a string: ")
     hash1 = md5(start_string.encode()).hexdigest()
     print("hash - " + hash1)
     size = len(start_string)
-    if size < 6:
-        inc = pow(10, size - 1)
-    else:
-        inc = 100000
+    search_zones = Search_Zones(size_of_string=size)
     print("Setting up server...")
     server_socket = socket.socket()
     server_socket.bind(('0.0.0.0', 8820))
@@ -33,7 +61,6 @@ def main():
     messages_to_send = []
     client_sockets = []
     id1 = 0
-    start = "0"
     searcher_lst = []
     found = False
     while True:
@@ -46,17 +73,29 @@ def main():
                 length = str(len(s))
                 message = length.zfill(3) + s
                 messages_to_send.append((connection, message))
-                area = str(start) + " - " + str(int(start) + inc)
-                start = int(start) + inc
-                length = str(len(area))
-                message = length.zfill(3) + area
+                zone = search_zones.search_in_lst()
+                zone.state = 0
+                searcher_lst.append(Searcher(id1=id1, sock=connection, area=zone.area))
+                s = zone.area
+                length = str(len(s))
+                message = length.zfill(3) + s
                 messages_to_send.append((connection, message))
-                searcher_lst.append(Searcher(id1=id1, sock=connection, area=area))
                 id1 += 1
 
             else:
                 try:
                     length = sock.recv(3).decode()
+                    if length == "":  # sock disconnected
+                        for searcher in searcher_lst:
+                            if searcher.sock == sock:
+                                for zone in search_zones.zones_lst:
+                                    if zone.area == searcher.area_of_search:
+                                        zone.state = -1
+                                        break
+                                searcher_lst.remove(searcher)
+                                break
+                        client_sockets.remove(sock)
+                        sock.close()
                     try:
                         data = sock.recv(int(length)).decode()
                         print(data)
@@ -76,13 +115,17 @@ def main():
 
                         elif "done" in data:
                             id2 = int(data.split(" done")[0])
-                            area = str(start) + " - " + str(int(start) + inc)
-                            start = int(start) + inc
-                            searcher_lst[id2].area_of_search = area
-                            s = searcher_lst[id2].area_of_search
-                            length = str(len(s))
-                            message = length.zfill(3) + s
-                            messages_to_send.append((sock, message))
+                            for searcher in searcher_lst:
+                                if searcher.id1 == id2:
+                                    search_zones.remove_zone(searcher.area_of_search)
+                                    zone = search_zones.search_in_lst()
+                                    zone.state = 0
+                                    s = zone.area
+                                    searcher.area_of_search = s
+                                    length = str(len(s))
+                                    message = length.zfill(3) + s
+                                    messages_to_send.append((sock, message))
+                                    break
 
                     except ValueError:
                         print("Value error")
@@ -91,6 +134,14 @@ def main():
 
                 except ConnectionResetError:
                     print("CRE")
+                    for searcher in searcher_lst:
+                        if searcher.sock == sock:
+                            for zone in search_zones.zones_lst:
+                                if zone.area == searcher.area_of_search:
+                                    zone.state = -1
+                                    break
+                            searcher_lst.remove(searcher)
+                            break
                     client_sockets.remove(sock)
                     sock.close()
 

@@ -15,7 +15,7 @@ class Worker:
 
 threads = []
 for i in range(5):
-    t = threading.Thread(target=Worker.print, args=(i,))
+    t = threading.Thread(target=Worker(i).print, args=(i,))
     print(threading.currentThread().getName())
     logging.basicConfig(level=logging.DEBUG, format='%(message)s')
     threads.append(t)

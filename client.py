@@ -13,6 +13,7 @@ def main():
     hash1 = ""
     s = ""
     id1 = "0"
+    threads = []
     while True:
         r_list, w_list, e_list = select.select([sock], [sock], [])
         for sok in r_list:
