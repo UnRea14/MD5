@@ -29,6 +29,7 @@ class ZoneList:
     def search_searchable_zone(self):
         for zone in self.zone_list:
             if zone.state == -1:
+                zone.state = 1
                 return zone
         return None
 
@@ -51,13 +52,14 @@ class Worker:
             split = self.zone.area.split(" - ")
             start = int(split[0])
             end = int(split[1])
-            while start < end and self.state != "done":
+            while start <= end and self.state != "done":
                 start += 1
                 s = str(start)
-                logging.info(f"thread {self.num} checked {s}")
                 s = s.zfill(3)
                 if md5(s.encode()).hexdigest() == self.hash1:
                     self.found = s
+                    print(str(self.num) + " found it!!!!!!!!!!!!!!!!!!!!!!!!!")
+                    self.state = "done"
             if self.state != "done":
                 self.state = "wait"
 
@@ -75,7 +77,7 @@ def main():
     workers = []
     zones = ZoneList()
     num_of_cores = multiprocessing.cpu_count()
-    for i in range(5):
+    for i in range(num_of_cores):
         w = Worker("", i, "")
         workers.append(w)
         t = threading.Thread(target=w.work)
@@ -94,7 +96,7 @@ def main():
                     while len(data) < int(length):
                         data += sok.recv(int(length)-len(data)).decode()
                         time.sleep(0.000001)
-                    print("data=" + data)
+                    print("data = " + data)
                     if data == "found":
                         quit()
 
@@ -119,7 +121,7 @@ def main():
                             s = str(start)
 
                         #  fill zones list
-                        print("----------------------zones---------------")
+                        print("----------------------zones----------------------")
                         i = 0
                         a = int((end - start) / num_of_cores)
                         while i < num_of_cores:
@@ -128,7 +130,7 @@ def main():
                             zones.append(Zone(area=zone))
                             print(zones[i].area)
                             i += 1
-                        print("------------------------------------------")
+                        print("-------------------------------------------------")
 
                         #  start work of threads
                         i = 0
@@ -136,27 +138,28 @@ def main():
                             zone = zones.search_searchable_zone()
                             if zone is not None:
                                 workers[i].zone = zone
-                                zone.state = 1
                                 if workers[i].state == "wait":
                                     workers[i].state = "work"
                             i += 1
 
                         #  check if string is found
-                        for w in workers:
-                            if w.found != "":
-                                s = w.found
-                                logging.info("send done to workers")
-                                w.state = "done"
-                                message = "found - " + s
-                                print(message)
-                                length = str(len(message))
-                                sok.send((length.zfill(3) + message).encode())
-                                sok.close()
-                                found = True
-                            elif found:
-                                w.state = "done"
-                        if found:
-                            exit()
+                        i = 0
+                        while i < len(workers):
+                            for w in workers:
+                                if found:
+                                    w.state = "done"
+                                elif w.found != "":
+                                    s = w.found
+                                    message = "found - " + s
+                                    print(message)
+                                    length = str(len(message))
+                                    sok.send((length.zfill(3) + message).encode())
+                                    sock.close()
+                                    found = True
+                                elif w.state == "wait":
+                                    i += 1
+                            if found:
+                                exit()
                         zones = ZoneList()
                         message = id1 + " done"
                         length = str(len(message))
