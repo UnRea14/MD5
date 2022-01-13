@@ -6,8 +6,7 @@ import time
 
 
 class Searcher:
-    def __init__(self, id1=-1, sock=None, num_of_cores=-1, area=""):
-        self.id1 = id1
+    def __init__(self, sock=None, num_of_cores=-1, area=""):
         self.sock = sock
         self.area_of_search = area
         self.num_of_cores = num_of_cores
@@ -76,7 +75,7 @@ class SearchZones:
 
 def main():
     """
-    hash1 = input("Enter hash: ")
+    hash1 = input("Enter hash: ") #  EC9C0F7EDCC18A98B1F31853B1813301
     print("hash - " + hash1)
     size = 10
     """
@@ -92,7 +91,6 @@ def main():
     print("Listening...")
     messages_to_send = []
     client_sockets = []
-    id1 = 0
     searcher_lst = SearcherList()
     found = False
     while True:
@@ -101,12 +99,11 @@ def main():
             if sock == server_socket:
                 connection, client_address = sock.accept()
                 client_sockets.append(connection)
-                s = f"{hash1}|{size}|{id1}"
+                s = f"{hash1}|{size}"
                 length = str(len(s))
                 message = length.zfill(3) + s
                 messages_to_send.append((connection, message))
                 searcher_lst.append(Searcher(sock=connection, num_of_cores=-1))
-                id1 += 1
 
             else:
                 try:
@@ -136,16 +133,14 @@ def main():
                                 server_socket.close()
                                 exit()
 
-                        elif ":" in data:
-                            split_data = data.split(": ")
+                        elif "nof " in data:
+                            split_data = data.split("nof ")
                             num_of_cores = int(split_data[1])
-                            id1 = int(split_data[0])
                             zones = search_zones.search_in_lst(num_of_cores)
                             start = zones[0].area.split(" - ")[0]
                             end = zones[len(zones) - 1].area.split(" - ")[1]
                             s = start + " - " + end
                             searcher = searcher_lst.search_by_sock(sock)
-                            searcher.id1 = id1
                             searcher.area_of_search = s
                             searcher.num_of_cores = num_of_cores
                             length = str(len(s))
@@ -160,8 +155,7 @@ def main():
                             found = True
 
                         elif "done" in data:
-                            id2 = int(data.split(" done")[0])
-                            done_searcher = searcher_lst.search_by_id(id2)
+                            done_searcher = searcher_lst.search_by_sock(sock)
                             search_zones.remove_zone(done_searcher.area_of_search)
                             zones = search_zones.search_in_lst(done_searcher.num_of_cores)
                             if not zones:
@@ -174,7 +168,6 @@ def main():
                             length = str(len(s))
                             message = length.zfill(3) + s
                             messages_to_send.append((sock, message))
-                            break
 
                     except ValueError:
                         print("Value error")

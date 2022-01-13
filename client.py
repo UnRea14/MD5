@@ -58,10 +58,61 @@ class Worker:
                 s = s.zfill(3)
                 if md5(s.encode()).hexdigest() == self.hash1:
                     self.found = s
-                    print(str(self.num) + " found it!!!!!!!!!!!!!!!!!!!!!!!!!")
+                    print("thread " + str(self.num) + " found it!")
                     self.state = "done"
             if self.state != "done":
                 self.state = "wait"
+
+
+def fill_zone_list(end, start, num_of_cores, zones):
+    """
+    fills the zones list
+    """
+    print("----------------------zones----------------------")
+    i = 0
+    a = int((end - start) / num_of_cores)
+    while i < num_of_cores:
+        b = start + (a * i)
+        zone = str(b) + " - " + str(b + a)
+        zones.append(Zone(area=zone))
+        print(zones[i].area)
+        i += 1
+    print("-------------------------------------------------")
+
+
+def start_threads(workers, zones):
+    """
+    starts the work of the threads
+    """
+    i = 0
+    while i < len(workers):
+        zone = zones.search_searchable_zone()
+        if zone is not None:
+            workers[i].zone = zone
+            if workers[i].state == "wait":
+                workers[i].state = "work"
+        i += 1
+
+
+def check_if_found(workers, sock, sok):
+    """
+    checks if the string is found
+    return: True if found, false else
+    """
+    i = 0
+    while i < len(workers):
+        for w in workers:
+            if w.found != "":
+                s = w.found
+                message = "found - " + s
+                print(message)
+                length = str(len(message))
+                sok.send((length.zfill(3) + message).encode())
+                sock.close()
+                return True
+            elif w.state == "wait":
+                i += 1
+    return False
 
 
 def main():
@@ -71,8 +122,6 @@ def main():
     print("Connected!")
     size = 0
     s = ""
-    id1 = "0"
-    found = False
     threads = []
     workers = []
     zones = ZoneList()
@@ -81,7 +130,6 @@ def main():
         w = Worker("", i, "")
         workers.append(w)
         t = threading.Thread(target=w.work)
-        print(threading.currentThread().getName())
         logging.basicConfig(level=logging.DEBUG, format='%(message)s')
         threads.append(t)
         t.start()
@@ -98,7 +146,9 @@ def main():
                         time.sleep(0.000001)
                     print("data = " + data)
                     if data == "found":
-                        quit()
+                        for w in workers:
+                            w.state = "done"
+                        exit()
 
                     if "|" in data:  # hash|chars in string|client number
                         split_data = data.split("|")
@@ -106,8 +156,7 @@ def main():
                         for w in workers:
                             w.hash1 = hash1
                         size = int(split_data[1])
-                        id1 = split_data[2]
-                        message = id1 + ": " + str(num_of_cores)
+                        message = "nof " + str(num_of_cores)
                         length = str(len(message))
                         sok.send((length.zfill(3) + message).encode())
 
@@ -119,59 +168,25 @@ def main():
                             s = str(start).zfill(size)
                         else:
                             s = str(start)
-
-                        #  fill zones list
-                        print("----------------------zones----------------------")
-                        i = 0
-                        a = int((end - start) / num_of_cores)
-                        while i < num_of_cores:
-                            b = start + (a * i)
-                            zone = str(b) + " - " + str(b + a)
-                            zones.append(Zone(area=zone))
-                            print(zones[i].area)
-                            i += 1
-                        print("-------------------------------------------------")
-
-                        #  start work of threads
-                        i = 0
-                        while i < len(workers):
-                            zone = zones.search_searchable_zone()
-                            if zone is not None:
-                                workers[i].zone = zone
-                                if workers[i].state == "wait":
-                                    workers[i].state = "work"
-                            i += 1
-
-                        #  check if string is found
-                        i = 0
-                        while i < len(workers):
+                        fill_zone_list(end, start, num_of_cores, zones)
+                        start_threads(workers, zones)
+                        found = check_if_found(workers, sock, sok)
+                        if found:
                             for w in workers:
-                                if found:
-                                    w.state = "done"
-                                elif w.found != "":
-                                    s = w.found
-                                    message = "found - " + s
-                                    print(message)
-                                    length = str(len(message))
-                                    sok.send((length.zfill(3) + message).encode())
-                                    sock.close()
-                                    found = True
-                                elif w.state == "wait":
-                                    i += 1
-                            if found:
-                                exit()
+                                w.state = "done"
+                            exit()
                         zones = ZoneList()
-                        message = id1 + " done"
+                        message = "done"
                         length = str(len(message))
                         sok.send((length.zfill(3) + message).encode())
 
                 except ValueError:
                     print("ValueError")
-                    quit()
+                    exit()
 
             except ConnectionAbortedError:
                 print("CAE")
-                quit()
+                exit()
 
 
 if __name__ == "__main__":
