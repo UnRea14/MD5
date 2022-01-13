@@ -168,6 +168,7 @@ def main():
                             s = str(start).zfill(size)
                         else:
                             s = str(start)
+
                         fill_zone_list(end, start, num_of_cores, zones)
                         start_threads(workers, zones)
                         found = check_if_found(workers, sock, sok)
