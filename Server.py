@@ -1,4 +1,3 @@
-from hashlib import md5
 import socket
 import select
 import math
@@ -74,15 +73,9 @@ class SearchZones:
 
 
 def main():
-    """
-    hash1 = input("Enter hash: ") #  EC9C0F7EDCC18A98B1F31853B1813301
+    hash1 = "EC9C0F7EDCC18A98B1F31853B1813301"
     print("hash - " + hash1)
     size = 10
-    """
-    start_string = input("Enter a string: ")
-    hash1 = md5(start_string.encode()).hexdigest()
-    print("hash - " + hash1)
-    size = len(start_string)
     search_zones = SearchZones(size_of_string=size)
     print("Setting up server...")
     server_socket = socket.socket()
